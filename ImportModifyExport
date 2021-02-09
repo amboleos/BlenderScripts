@@ -183,10 +183,80 @@ for ob in obj_list:
     print("Meshsss : " + str(bpy.context.view_layer.objects.active))
         #bpy.ops.object.mode_set( mode   = 'OBJECT'   )
 #        # export the currently selected object to its own file based on its name
-    bpy.ops.export_scene.obj(filepath=str(path_to_obj_dir + "/CNC/" + imported_obj.name + '.obj' ), use_selection=True,use_materials=False)
+    bpy.ops.export_scene.obj(filepath=str(path_to_obj_dir + "/CNC/" + imported_obj.name + '.obj' ), use_selection=True,use_materials=False,axis_up='Z',axis_forward='Y')
 #        print("\/")
 #        print(path_CNC + imported_obj.name + '.obj')
 #        #STL istenirse bunu kullan
 #        #bpy.ops.export_mesh.stl(filepath=str(path + ob.name + '.stl'), check_existing=True, filter_glob="*.stl", ascii=False,  axis_forward='Y', axis_up='Z', use_selection=True, global_scale=1.0)
 
     
+
+
+
+#os.chdir("upload")
+
+#if not os.path.exists("ctms"):
+#    os.makedirs("ctms")
+
+## deselect all objects
+#bpy.ops.object.select_all(action='DESELECT')    
+
+## loop through all the objects in the scene
+#scene = bpy.context.scene
+
+#for ob in scene.objects:
+#    print (ob)
+
+#    old_obname=ob.name
+#    new_obname=ob.name
+
+#    
+#    print( old_obname+">>>"+new_obname)
+#     
+#    # make the current object active and select it
+#    scene.objects.active = ob
+#    ob.select = True
+#    ##ob.rotation_euler[0] = pi/2
+#    ob.convert_space(from_space='LOCAL', to_space='WORLD')
+#    #mod = ob.modifiers.new(name='decimate', type='DECIMATE')
+#    #mod.ratio = 0.8
+#    
+#    # store the location of current 3d cursor  
+#    saved_location = bpy.context.scene.cursor_location.copy()  # returns a copy of the vector  
+#  
+#    # give 3dcursor new coordinates  
+#    bpy.context.scene.cursor_location = ob.location + mathutils.Vector((0.0, 0.0, 25.0)) 
+#    ob.location -=  mathutils.Vector((0.0, 0.0, 25.0))
+#    ob.rotation_euler = (radians(-90), radians(90), 0) 
+#    print("orgin changed to " + str(bpy.context.scene.cursor_location) + "from" +str(ob.location) )
+#    # set the origin on the current object to the 3dcursor location  
+#    bpy.ops.object.origin_set(type='ORIGIN_CURSOR')  
+#  
+#    # set 3dcursor location back to the stored location  
+#    bpy.context.scene.cursor_location = saved_location  
+
+#    
+#    # make sure that we only export meshes
+#    if ob.type == 'MESH':
+#        # export the currently selected object to its own file based on its name
+#        #bpy.ops.export_scene.obj(filepath=str(path + ob.name + '.obj'), use_selection=True)
+#        pass
+#        bpy.ops.export_mesh.stl(filepath=str(path + ob.name + '.stl'), check_existing=True, filter_glob="*.stl", ascii=False,  axis_forward='Y', axis_up='Z', use_selection=True, global_scale=1.0)
+#        #bpy.ops.export.three(filepath=str(path + ob.name + '.json'))
+#    # deselect the object and move on to another if any more are left
+#    ob.select = False
+
+#os.chdir("upload")
+
+#if not os.path.exists("ctms"):
+#    os.makedirs("ctms")
+#    
+#for file in glob.glob("*.stl"):
+#    print(file)
+
+#    FNULL = open(os.devnull, 'w')    #use this if you want to suppress output to stdout from the subprocess
+#    filename_out = os.path.splitext(file)[0].lower()+".ctm"
+
+#    args = "ctmconv " +file +" "+"ctms/"+ filename_out+" "+"--method MG2 --level 9"
+#    subprocess.call(args, stdout=FNULL, stderr=FNULL, shell=False)
+#    
