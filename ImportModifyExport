@@ -1,0 +1,192 @@
+#!/usr/bin/env python
+# -*-coding=utf-8 -*-
+
+import bpy
+import os,sys
+import glob
+import subprocess
+import mathutils
+import re
+import shutil
+from math import pi
+from math import radians
+from mathutils import Matrix
+import bmesh
+import math
+import mathutils
+
+
+#STL Import
+#Obj Import
+#STL rotate x 90 z 90
+#Obj rotate z 90
+#obj smooth vertices 
+#    repeat 33
+#    smooth 1
+#obj decimate geometri
+#    0.5
+#obj line(2) select all 
+#obj Extrude 5 
+#obj select all faces
+#obj delete 1 big face
+#obj shrink 1 mm
+#obj duplicate selected faces
+#obj seperate selection
+#obj edit mode faces
+
+
+
+# we will demonstrate on an active object
+obj = bpy.context.active_object
+
+def rotate_object(rot_mat):
+    # decompose world_matrix's components, and from them assemble 4x4 matrices
+    orig_loc, orig_rot, orig_scale = obj.matrix_world.decompose()
+    #
+    orig_loc_mat   = Matrix.Translation(orig_loc)
+    orig_rot_mat   = orig_rot.to_matrix().to_4x4()
+    orig_scale_mat = (Matrix.Scale(orig_scale[0],4,(1,0,0)) @ 
+                      Matrix.Scale(orig_scale[1],4,(0,1,0)) @ 
+                      Matrix.Scale(orig_scale[2],4,(0,0,1)))
+    #
+    # assemble the new matrix
+    obj.matrix_world = orig_loc_mat @ rot_mat @ orig_rot_mat @ orig_scale_mat 
+
+
+
+#Toggle console
+#bpy.ops.wm.console_toggle();
+
+scene = bpy.context.scene
+
+path_to_obj_dir = bpy.path.abspath('//')
+print (path_to_obj_dir)
+
+# get list of all files in directory
+file_list = sorted(os.listdir(path_to_obj_dir))
+
+# get a list of files ending in 'obj'
+obj_list = [item for item in file_list if item.endswith('.stl')]
+
+# Sahneye hem stl hem obj dosyaları alınıyor. Bu sırada aligner isimleri ile obj dosyaları tekrar isimlendiriliyor.
+for ob in obj_list:
+    print (ob)
+    regex = re.compile('Step ([0-9]*)')
+    aligner_no = regex.findall(ob)
+    print(aligner_no)
+    
+    #Bu noktada eski klasörlü şekilde OBJ dosyaları çekme bulunuyor
+    path_to_file = os.path.join(path_to_obj_dir, ob)
+    path = os.path.join(path_to_obj_dir,ob+"_GingivaLinesExt")
+    print (path)
+    
+    # Stl file yüklendi ve seçildi
+    old_objs = set(bpy.context.scene.objects)
+    bpy.ops.import_mesh.stl(filepath = path_to_file)
+    imported_objs = set(bpy.context.scene.objects) - old_objs
+    imported_obj = imported_objs.pop()
+
+    ## deselect all objects
+    bpy.ops.object.select_all(action='DESELECT')    
+
+    # X90 Z90 rotasyon verildi
+    bpy.context.view_layer.objects.active = imported_obj
+    imported_obj.matrix_world @= Matrix.Rotation(radians(90), 4, 'Z')
+    imported_obj.matrix_world @= Matrix.Rotation(radians(90), 4, 'X')
+    
+    
+    old_objs = set(bpy.context.scene.objects)
+#    Eski OBJ çekme sistemi 
+#    try:
+#        path_to_file = os.path.join(path, "Combined Maxi.obj")
+#        bpy.ops.import_scene.obj(filepath = path_to_file )
+#    except:
+#        pass
+#    try:
+#        path_to_file = os.path.join(path, "Combined Mand.obj")
+#        bpy.ops.import_scene.obj(filepath = path_to_file )    
+#    except:
+#        pass
+
+#    Yeni Obje Çekme
+    try:
+        path = os.path.join(path_to_obj_dir,ob+" Trim.obj")
+        bpy.ops.import_scene.obj(filepath = path )
+    except:
+        print("Trim file bulunamadı")
+    
+    imported_objs = set(bpy.context.scene.objects) - old_objs
+    imported_obj = imported_objs.pop()
+    
+    imported_obj.name = (imported_obj.name.split("."))[0]+aligner_no[0]
+    
+    # X90 Z90 rotasyon verildi
+    bpy.ops.object.select_all(action='DESELECT') 
+    bpy.context.view_layer.objects.active = imported_obj
+    imported_obj.matrix_world @= Matrix.Rotation(radians(90), 4, 'Y')
+    
+    bpy.ops.object.mode_set( mode   = 'EDIT'   )
+    bpy.ops.mesh.select_mode( type  = 'VERT'   )
+    
+    # Smooth Vertices  
+    #bpy.ops.mesh.vertices_smooth(factor=1.0, repeat=20, xaxis=True, yaxis=True, zaxis=True, wait_for_input=True)
+    bpy.ops.mesh.decimate(ratio=0.2, use_vertex_group=False, vertex_group_factor=1.0, invert_vertex_group=False, use_symmetry=False, symmetry_axis='Y')
+    
+    bpy.ops.mesh.select_mode( type  = 'EDGE'   )
+    bpy.ops.mesh.select_all( action = 'SELECT' )
+
+    # Create Bmesh
+    bm = bmesh.new()
+    bm = bmesh.from_edit_mesh( imported_obj.data )
+    
+
+    
+    ret = bmesh.ops.extrude_edge_only(bm,edges=bm.edges[:])
+    geom_extrude_mid = ret["geom"]
+    del ret
+    
+    # Bu iki satır farklı bir yerde çağırılması gerekebilir. Tek yüzey silindi
+    faces_select = [f for f in bm.faces if f.select] 
+    bmesh.ops.delete(bm, geom=faces_select, context="FACES_ONLY") 
+    
+    verts_extrude_b = [ele for ele in geom_extrude_mid
+                   if isinstance(ele, bmesh.types.BMVert)]
+    edges_extrude_b = [ele for ele in geom_extrude_mid
+                       if isinstance(ele, bmesh.types.BMEdge) and ele.is_boundary]
+    bmesh.ops.translate( bm, verts=verts_extrude_b, vec=(0.0, 5.0, 0.0))
+    
+    bmesh.update_edit_mesh(imported_obj.data) # Write the bmesh back to the mesh
+    bm.free()  # free and prevent further access
+    
+    bpy.ops.object.mode_set( mode   = 'EDIT'   )
+    bpy.ops.mesh.select_mode( type  = 'EDGE'   )
+    bpy.ops.mesh.select_all( action = 'SELECT' )
+    
+    #Shrink Value buraya eklenir.
+    #bpy.ops.transform.shrink_fatten(value=-0.5, use_even_offset=False, mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
+    
+    bpy.ops.object.editmode_toggle()
+    
+    print(ob + "loaded")
+    
+    if not os.path.exists("CNC"):
+        os.makedirs("CNC")
+    
+    path_CNC = os.path.join(path_to_obj_dir,"CNC")
+    path_CNC_with_obj = os.path.join(path_CNC,imported_obj.name + '.obj')
+    
+    
+    bpy.context.view_layer.objects.active = imported_obj
+    bpy.context.active_object.select_set(state=True)
+
+
+    print("Meshsss : " + str(bpy.context.view_layer.objects.active))
+        #bpy.ops.object.mode_set( mode   = 'OBJECT'   )
+#        # export the currently selected object to its own file based on its name
+    bpy.ops.export_scene.obj(filepath=str(path_to_obj_dir + "/CNC/" + imported_obj.name + '.obj' ), use_selection=True,use_materials=False)
+#        print("\/")
+#        print(path_CNC + imported_obj.name + '.obj')
+#        #STL istenirse bunu kullan
+#        #bpy.ops.export_mesh.stl(filepath=str(path + ob.name + '.stl'), check_existing=True, filter_glob="*.stl", ascii=False,  axis_forward='Y', axis_up='Z', use_selection=True, global_scale=1.0)
+
+    
